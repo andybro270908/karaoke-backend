@@ -2,8 +2,8 @@ const express = require("express");
 const multer = require("multer");
 const cors = require("cors");
 const { exec } = require("child_process");
-const path = require("path");
 const fs = require("fs");
+const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,18 +17,54 @@ app.get("/", (req, res) => {
   res.send("Karaoke backend is running");
 });
 
+function escapeText(text) {
+  return text
+    .replace(/\\/g, "\\\\")
+    .replace(/:/g, "\\:")
+    .replace(/'/g, "\\'")
+    .replace(/%/g, "%%");
+}
+
 app.post("/generate", upload.single("audio"), async (req, res) => {
   try {
-    const lyrics = req.body.lyrics;
-    if (!req.file || !lyrics) {
+    const lyricsText = req.body.lyrics;
+    if (!req.file || !lyricsText) {
       return res.status(400).json({ error: "Audio and lyrics required" });
     }
 
     const audioPath = req.file.path;
-    const outputPath = `output_${Date.now()}.mp4`;
+    const outputPath = `karaoke_${Date.now()}.mp4`;
 
-    // VERY SIMPLE placeholder FFmpeg command (we improve later)
-    const cmd = `ffmpeg -y -i "${audioPath}" "${outputPath}"`;
+    // Prepare lyrics (one line per second - simple)
+    const lines = lyricsText
+      .split("\n")
+      .map(l => l.trim())
+      .filter(Boolean);
+
+    const drawtextFilters = lines.map((line, i) => {
+      const safe = escapeText(line);
+      return (
+        "drawtext=" +
+        `text='${safe}':` +
+        "x=(w-text_w)/2:" +
+        "y=h-100:" +
+        "fontsize=32:" +
+        "fontcolor=white:" +
+        "box=1:" +
+        "boxcolor=black@0.6:" +
+        `enable='between(t,${i},${i + 1})'`
+      );
+    }).join(",");
+
+    // Create black background + lyrics + audio
+    const cmd = `
+ffmpeg -y \
+-f lavfi -i color=c=black:s=640x480 \
+-i "${audioPath}" \
+-vf "${drawtextFilters}" \
+-shortest \
+"${outputPath}"
+`;
 
     exec(cmd, (err) => {
       if (err) {
@@ -42,8 +78,8 @@ app.post("/generate", upload.single("audio"), async (req, res) => {
       });
     });
 
-  } catch (e) {
-    console.error(e);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
