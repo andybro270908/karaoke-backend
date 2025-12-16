@@ -33,7 +33,7 @@ app.post("/generate", upload.single("audio"), async (req, res) => {
     }
 
     const audioPath = req.file.path;
-    const outputPath = `karaoke_${Date.now()}.mp4`;
+    const outputPath = path.join(__dirname, `karaoke_${Date.now()}.mp4`);
 
     // Prepare lyrics (one line per second - simple)
     const lines = lyricsText
@@ -57,15 +57,10 @@ app.post("/generate", upload.single("audio"), async (req, res) => {
     }).join(",");
 
     // Create black background + lyrics + audio
-    const cmd = `
-ffmpeg -y \
--f lavfi -i color=c=black:s=640x480 \
--i "${audioPath}" \
--vf "${drawtextFilters}" \
--shortest \
-"${outputPath}"
-`;
+   const cmd = `ffmpeg -y -f lavfi -i color=c=black:s=640x480 -i "${audioPath}" -vf "${drawtextFilters}" -shortest "${outputPath}"`;
 
+    console.log("Running FFmpeg:", cmd);
+   
     exec(cmd, (err) => {
       if (err) {
         console.error(err);
