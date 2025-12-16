@@ -68,17 +68,16 @@ app.post("/generate", upload.single("audio"), async (req, res) => {
 
     console.log("Running FFmpeg:", cmd);
    
-    exec(cmd, (err) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: "FFmpeg failed" });
-      }
+    console.log(">>> /generate endpoint HIT - sending test response");
 
-      res.download(outputPath, () => {
-        fs.unlinkSync(audioPath);
-        fs.unlinkSync(outputPath);
-      });
-    });
+// TEMPORARY TEST RESPONSE
+res.json({
+  success: true,
+  message: "Backend received audio and lyrics successfully"
+});
+
+// Cleanup uploaded file
+fs.unlinkSync(audioPath);
 
   } catch (err) {
     console.error(err);
