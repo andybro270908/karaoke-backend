@@ -26,6 +26,7 @@ function escapeText(text) {
 }
 
 app.post("/generate", upload.single("audio"), async (req, res) => {
+  console.log(">>> /generate endpoint HIT");
   try {
     const lyricsText = req.body.lyrics;
     if (!req.file || !lyricsText) {
